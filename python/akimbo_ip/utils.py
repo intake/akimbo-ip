@@ -29,8 +29,13 @@ def to_pa_string(data, offsets, mask=None):
                                  [mask, pa.py_buffer(offsets), pa.py_buffer(data)])
 
 
-form = ak.forms.ListOffsetForm('i32', ak.forms.NumpyForm('uint8', parameters={'__array__': 'char'}), parameters={'__array__': 'string'})
+form = ak.forms.ListOffsetForm(
+    'i32', 
+    ak.forms.NumpyForm('uint8', parameters={'__array__': 'char'}), 
+    parameters={'__array__': 'string'}
+)
 
 
-def to_ak_string(data, offsets):
-    return ak.from_buffers(form, len(offsets) - 1, {"None-offsets": offsets, "None-data": data})
+def to_ak_string(data, offsets, highlevel=True):
+    return ak.from_buffers(form, len(offsets) - 1, {"None-offsets": offsets, "None-data": data},
+                           highlevel=highlevel)
