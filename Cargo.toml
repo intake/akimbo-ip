@@ -1,0 +1,13 @@
+[package]
+name = "akimbo-ip"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "akimbo_ip"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21.0", features = ["extension-module"] }
+numpy = "0.21.0"
+ipnet = "2.9.0"

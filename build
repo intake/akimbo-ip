@@ -1,0 +1,2 @@
+maturin build --release --strip -o dist
+pip install ./dist/*whl --force-reinstall --no-deps
