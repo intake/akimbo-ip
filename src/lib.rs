@@ -1,4 +1,5 @@
 #![feature(ip)]
+#![feature(addr_parse_ascii)]
 use pyo3::prelude::*;
 use core::net::Ipv4Addr;
 use numpy::pyo3::Python;
@@ -32,6 +33,22 @@ fn to_text4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>)
             offsets.push(curr);
         };
     Ok((data.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
+}
+
+#[pyfunction]
+fn parse4<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
+            data : PyReadonlyArray1<'py, u8>
+) -> PyResult<Bound<'py, PyArray1<u32>>> {
+    let ar = offsets.as_array();
+    let sl = ar.as_slice().unwrap();
+    let ar2 = data.as_array();
+    let by = ar2.as_slice().unwrap();
+    let out: Vec<u32> = sl.iter().zip(sl[1..].iter()).map(
+        |(start, stop)| {
+            Ipv4Addr::parse_ascii(&by[*start as usize..*stop as usize]).unwrap().to_bits()
+        }
+    ).collect();
+    Ok(out.into_pyarray_bound(py))
 }
 
 
@@ -122,5 +139,6 @@ fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(is_multicast4, m)?)?;
     m.add_function(wrap_pyfunction!(is_documentation4, m)?)?;
     m.add_function(wrap_pyfunction!(to_text4, m)?)?;
+    m.add_function(wrap_pyfunction!(parse4, m)?)?;
     Ok(())
 }
