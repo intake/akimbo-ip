@@ -2,9 +2,41 @@
 #![feature(addr_parse_ascii)]
 use pyo3::prelude::*;
 use core::net::Ipv4Addr;
+use std::str::{self, FromStr};
+use ipnet::Ipv4Net;
 use numpy::pyo3::Python;
 use numpy::ndarray::ArrayView1;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+
+
+pub fn netmask_to_prefix4(mut mask: u32) -> u8 {
+    let mut zerobits: u8 = 0;
+    while (mask & 0x1) == 0 {
+        mask = mask >> 1;
+        zerobits += 1;
+    }
+    32 - zerobits
+}
+
+pub fn prefix_to_netmask4(prefix: u8) -> u32 {
+    // TODO: check for prefix >= 32 .checked_shl(prefix).unwrap_or(0)
+    0xffffffff << prefix
+}
+
+
+pub fn netmask_to_prefix6(mut mask: u128) -> u8 {
+    let mut zerobits: u8 = 0;
+    while (mask & 0x1) == 0 {
+        mask = mask >> 1;
+        zerobits += 1;
+    }
+    32 - zerobits
+}
+
+pub fn prefix_to_netmask6(prefix: u8) -> u128 {
+    // TODO: check for prefix >= 128 .checked_shl(prefix).unwrap_or(0)
+    0xffffffffffffffffffffffffffffffff << prefix
+}
 
 
 /// Simplistic function that prints out the input ints as IP4 addresses
@@ -26,7 +58,7 @@ fn to_text4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>)
     let mut curr: u32 = 0;
     for out in  x.as_array().iter()
         {
-            let s = Ipv4Addr::from(*out).to_string();
+            let s = Ipv4Addr::from_bits(*out).to_string();
             let t = s.as_bytes();
             data.extend(t);
             curr += t.len() as u32;
@@ -53,68 +85,89 @@ fn parse4<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
 
 
 #[pyfunction]
+fn parsenet4<'py>(py: Python<'py>, 
+    offsets: PyReadonlyArray1<'py, u32>,
+    data : PyReadonlyArray1<'py, u8>
+) -> PyResult<(Bound<'py, PyArray1<u32>>, Bound<'py, PyArray1<u8>>)> {
+    let ar = offsets.as_array();
+    let sl = ar.as_slice().unwrap();
+    let ar2 = data.as_array();
+    let by = ar2.as_slice().unwrap();
+    let mut outaddr: Vec<u32> = Vec::with_capacity(ar.len() - 1);
+    let mut outpref: Vec<u8> = Vec::with_capacity(ar.len() - 1);
+    for (start, stop) in sl.iter().zip(sl[1..].iter()) {
+        let net = Ipv4Net::from_str(
+            &str::from_utf8(&by[*start as usize..*stop as usize]).unwrap()).unwrap();
+        outaddr.push(net.addr().to_bits());
+        outpref.push(net.prefix_len());
+    };
+    Ok((outaddr.into_pyarray_bound(py), outpref.into_pyarray_bound(py)))
+}
+
+
+#[pyfunction]
 fn is_broadcast4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_broadcast()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_broadcast()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_global4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_global()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_global()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_unspecified4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_unspecified()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_unspecified()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_loopback4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_loopback()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_loopback()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_private4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_private()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_private()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_link_local4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_link_local()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_link_local()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_shared4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_shared()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_shared()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_benchmarking4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_benchmarking()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_benchmarking()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_reserved4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_reserved()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_reserved()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_multicast4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_multicast()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_multicast()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_documentation4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).is_documentation()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_documentation()).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
@@ -140,5 +193,6 @@ fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(is_documentation4, m)?)?;
     m.add_function(wrap_pyfunction!(to_text4, m)?)?;
     m.add_function(wrap_pyfunction!(parse4, m)?)?;
+    m.add_function(wrap_pyfunction!(parsenet4, m)?)?;
     Ok(())
 }

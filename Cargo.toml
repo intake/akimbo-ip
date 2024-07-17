@@ -11,3 +11,4 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.21.0", features = ["extension-module"] }
 numpy = "0.21.0"
 ipnet = "2.9.0"
+byteorder = { version = "1.5.0", features = ["i128"] }
