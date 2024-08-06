@@ -1,0 +1,11 @@
+name: test-environment
+channels:
+  - conda-forge
+dependencies:
+  # required dependencies
+  - python=3.10
+  - rust
+  - pytest
+  - numba
+  - pandas
+  - awkward
