@@ -24,8 +24,7 @@ jobs:
       - name: Setup Conda Environment
         uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: 3.10
-          environment-file: CI/env310.yaml
+          environment-file: CI/env.yaml
           activate-environment: test-environment
           auto-activate-base: false
       - name: install
