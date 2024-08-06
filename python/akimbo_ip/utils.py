@@ -16,7 +16,7 @@ def pa_mask(mask):
 
 def to_pa_string(data, offsets, mask=None):
     """Construct pyarrow string-type array from components
-    
+
     data: u8 array
     offsets: u32 or u64 array
         Length is number of elements + 1; first value is 0, last value is
@@ -25,17 +25,23 @@ def to_pa_string(data, offsets, mask=None):
         Length is the number of elements / 8, rounded up. 1 is valid.
     """
     mask = pa_mask(mask)
-    return pa.Array.from_buffers(styp, len(offsets) - 1,
-                                 [mask, pa.py_buffer(offsets), pa.py_buffer(data)])
+    return pa.Array.from_buffers(
+        styp, len(offsets) - 1, [mask, pa.py_buffer(offsets), pa.py_buffer(data)]
+    )
 
 
 form = ak.forms.ListOffsetForm(
-    'i32', 
-    ak.forms.NumpyForm('uint8', parameters={'__array__': 'char'}), 
-    parameters={'__array__': 'string'}
+    "i32",
+    ak.forms.NumpyForm("uint8", parameters={"__array__": "char"}),
+    parameters={"__array__": "string"},
 )
 
 
-def to_ak_string(data, offsets, highlevel=True):
-    return ak.from_buffers(form, len(offsets) - 1, {"None-offsets": offsets, "None-data": data},
-                           highlevel=highlevel)
+def to_ak_string(inputs, highlevel=False):
+    data, offsets = inputs
+    return ak.from_buffers(
+        form,
+        len(offsets) - 1,
+        {"None-offsets": offsets, "None-data": data},
+        highlevel=highlevel,
+    )

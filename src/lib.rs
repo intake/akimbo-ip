@@ -75,9 +75,9 @@ fn parse4<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
     let sl = ar.as_slice().unwrap();
     let ar2 = data.as_array();
     let by = ar2.as_slice().unwrap();
-    let out: Vec<u32> = sl.iter().zip(sl[1..].iter()).map(
-        |(start, stop)| {
-            Ipv4Addr::parse_ascii(&by[*start as usize..*stop as usize]).unwrap().to_bits()
+    let out: Vec<u32> = sl.windows(2).map(
+        |w| {
+            Ipv4Addr::parse_ascii(&by[w[0] as usize..w[1] as usize]).unwrap().to_bits()
         }
     ).collect();
     Ok(out.into_pyarray_bound(py))
@@ -95,9 +95,9 @@ fn parsenet4<'py>(py: Python<'py>,
     let by = ar2.as_slice().unwrap();
     let mut outaddr: Vec<u32> = Vec::with_capacity(ar.len() - 1);
     let mut outpref: Vec<u8> = Vec::with_capacity(ar.len() - 1);
-    for (start, stop) in sl.iter().zip(sl[1..].iter()) {
+    for w in sl.windows(2) {
         let net = Ipv4Net::from_str(
-            &str::from_utf8(&by[*start as usize..*stop as usize]).unwrap()).unwrap();
+            &str::from_utf8(&by[w[0] as usize..w[1] as usize]).unwrap()).unwrap();
         outaddr.push(net.addr().to_bits());
         outpref.push(net.prefix_len());
     };
