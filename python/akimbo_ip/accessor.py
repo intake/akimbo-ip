@@ -1,3 +1,6 @@
+import ipaddress
+import functools
+
 import awkward as ak
 import numpy as np
 import pyarrow as pa
@@ -30,18 +33,50 @@ def match_stringlike(arr):
     return "string" in arr.parameters.get("__array__", "")
 
 
-def parse4(str_arr):
+def parse_address4(str_arr):
     out = lib.parse4(str_arr.offsets.data.astype("uint32"), str_arr.content.data)
-    return ak.contents.RegularArray(ak.contents.NumpyArray(out.view("uint8")), size=4)
+    return ak.contents.RegularArray(
+        ak.contents.NumpyArray(out.view("uint8"), parameters={"__array__": "byte"}), 
+        size=4, 
+        parameters={"__array__": "bytestring"}
+    )
+
+
+def parse_net4(str_arr):
+    out = lib.parsenet4(
+        str_arr.offsets.data.astype("uint32"), str_arr.content.data
+    )
+    return ak.contents.RecordArray(
+        [ak.contents.RegularArray(
+            ak.contents.NumpyArray(out[0].view("uint8"), parameters={"__array__": "byte"}), 
+            size=4, 
+            parameters={"__array__": "bytestring"}
+        ),
+        ak.contents.NumpyArray(out[1])],
+        fields=["address", "prefix"]
+    )
+    
+
+def contains4(nets, other):
+    arr = nets["address"]
+    if arr.is_leaf:
+        arr = arr.data.astype("uint32")
+    else:
+        # bytestring or 4 * uint8 regular
+        arr = arr.content.data.view("uint32")
+    ip = ipaddress.IPv4Address(other)._ip
+    out = lib.contains_one4(arr, nets["prefix"].data, ip)
+    return ak.contents.NumpyArray(out)
 
 
 def dec4(func, match=match_ip4, outtype=ak.contents.NumpyArray):
+    @functools.wraps(func)
     def func1(arr):
-        if arr.is_regular:
-            # already checked list-of-fours
-            arr = arr.content.data.view("uint32")
-        else:
+        if arr.is_leaf:
             arr = arr.data.astype("uint32")
+        else:
+            # bytestring or 4 * uint8 regular
+            arr = arr.content.data.view("uint32")
         return func(arr)
 
     return dec(func1, match=match, outtype=outtype, inmode="awkward")
@@ -55,31 +90,11 @@ class IPAccessor:
 
     to_string4 = dec4(lib.to_text4, outtype=utils.to_ak_string)
 
-    parse4 = dec(parse4, inmode="ak", match=match_stringlike)
+    parse_address4 = dec(parse_address4, inmode="ak", match=match_stringlike)
 
-    def parse_net4(self):
-        t = self.accessor._obj.values._pa_array.type
-        assert t == "string" or t == "binary"
-        data = self.accessor._obj.values._pa_array.combine_chunks()
-        mask, offsets, by = data.buffers()
-        assert mask is None
-        out = lib.parsenet4(
-            np.frombuffer(offsets, "uint32"), np.frombuffer(by, "uint8")
-        )
-        return self.accessor.to_output(
-            ak.Array(
-                {
-                    "address": ak.contents.RegularArray(
-                        ak.contents.NumpyArray(
-                            out[0].view("uint8"), parameters={"__array__": "byte"}
-                        ),
-                        size=4,
-                        parameters={"__array__": "bytestring"},
-                    ),
-                    "prefix": ak.contents.NumpyArray(out[1]),
-                }
-            )
-        )
+    parse_net4 = dec(parse_net4, inmode="ak", match=match_stringlike)
+    
+    contains4 = dec(contains4, inmode="ak", match=match_net4)
 
 
 Accessor.register_accessor("ip", IPAccessor)

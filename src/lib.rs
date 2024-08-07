@@ -67,6 +67,7 @@ fn to_text4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>)
     Ok((data.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
 }
 
+/// Parse strings into IP4 addresses (length 4 bytestrings)
 #[pyfunction]
 fn parse4<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
             data : PyReadonlyArray1<'py, u8>
@@ -83,7 +84,7 @@ fn parse4<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
     Ok(out.into_pyarray_bound(py))
 }
 
-
+/// Parse strings into IP4 networks (length 4 bytestring and 1-byte prefix value)
 #[pyfunction]
 fn parsenet4<'py>(py: Python<'py>, 
     offsets: PyReadonlyArray1<'py, u32>,
@@ -102,6 +103,20 @@ fn parsenet4<'py>(py: Python<'py>,
         outpref.push(net.prefix_len());
     };
     Ok((outaddr.into_pyarray_bound(py), outpref.into_pyarray_bound(py)))
+}
+
+
+/// Is `other` contained in the address/prefix pairs of the input array?
+#[pyfunction]
+fn contains_one4<'py>(py: Python<'py>,
+    addr: PyReadonlyArray1<'py, u32>,
+    pref: PyReadonlyArray1<'py, u8>,
+    other: u32
+) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = addr.as_array().iter().zip(pref.as_array()).map(|(add, pre)| 
+        Ipv4Net::new(Ipv4Addr::from_bits(*add), *pre).unwrap().contains(&Ipv4Addr::from_bits(other))
+    ).collect();
+    Ok(out.into_pyarray_bound(py))
 }
 
 
@@ -194,5 +209,6 @@ fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_text4, m)?)?;
     m.add_function(wrap_pyfunction!(parse4, m)?)?;
     m.add_function(wrap_pyfunction!(parsenet4, m)?)?;
+    m.add_function(wrap_pyfunction!(contains_one4, m)?)?;
     Ok(())
 }
