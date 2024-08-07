@@ -18,7 +18,7 @@ def match_ip4(arr):
 
 
 def match_ip6(arr):
-    return arr.is_leaf and arr.dtype.itemsize == 16
+    return arr.is_regular and arr.size == 16 and arr.content.is_leaf and arr.content.dtype.itemsize == 1
 
 
 def match_net4(arr, address="address", prefix="prefix"):
@@ -29,16 +29,32 @@ def match_net4(arr, address="address", prefix="prefix"):
     )
 
 
+def match_net6(arr, address="address", prefix="prefix"):
+    return (
+        arr.is_record
+        and {address, prefix}.issubset(arr.fields)
+        and match_ip6(arr[address])
+    )
+
+
 def match_stringlike(arr):
     return "string" in arr.parameters.get("__array__", "")
 
 
 def parse_address4(str_arr):
+    """Interpret (byte)strings as IPv4 addresses
+    
+    Output will be fixed length 4 bytestring array
+    """
     out = lib.parse4(str_arr.offsets.data.astype("uint32"), str_arr.content.data)
     return utils.u8_to_ip4(out.view("uint8"))
 
 
 def parse_net4(str_arr):
+    """Interpret (byte)strings as IPv4 networks (address/prefix)
+    
+    Output will be a record array {"address": fixed length 4 bytestring, "prefix": uint8}
+    """
     out = lib.parsenet4(
         str_arr.offsets.data.astype("uint32"), str_arr.content.data
     )
@@ -54,6 +70,7 @@ def parse_net4(str_arr):
     
 
 def contains4(nets, other):
+    # TODO: this is single-value only
     arr = nets["address"]
     if arr.is_leaf:
         arr = arr.data.astype("uint32")
