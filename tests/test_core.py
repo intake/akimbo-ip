@@ -5,7 +5,7 @@ import pytest
 
 import akimbo.pandas
 
-import akimbo_ip  # registers .ip subaccessor
+import akimbo_ip.accessor  # registers .ip subaccessor
 
 
 @pytest.fixture
