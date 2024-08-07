@@ -42,3 +42,11 @@ def test_6_out():
     out = s1.ak.ip.to_ipv6_mapped()
     assert out[0] == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x01'
     
+
+def test_rename():
+    s = pd.DataFrame({"address": pd.Series([1], dtype="uint32"), 
+                      "end": [16]}).ak.merge()
+    out = s.ak.ip.contains4(b"\x00\x00\x00\x01")
+    assert s.tolist() == out.tolist()  # no change, no match
+    out = out.ak.ip.contains4(b"\x00\x00\x00\x01", match_kwargs={"prefix": "end"})
+    assert out[0] is True

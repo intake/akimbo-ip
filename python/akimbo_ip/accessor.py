@@ -69,16 +69,16 @@ def parse_net4(str_arr):
     )
     
 
-def contains4(nets, other):
+def contains4(nets, other, address="address", prefix="prefix"):
     # TODO: this is single-value only
-    arr = nets["address"]
+    arr = nets[address]
     if arr.is_leaf:
         arr = arr.data.astype("uint32")
     else:
         # bytestring or 4 * uint8 regular
         arr = arr.content.data.view("uint32")
     ip = ipaddress.IPv4Address(other)._ip
-    out = lib.contains_one4(arr, nets["prefix"].data, ip)
+    out = lib.contains_one4(arr, nets[prefix].data.astype("uint8"), ip)
     return ak.contents.NumpyArray(out)
 
 
