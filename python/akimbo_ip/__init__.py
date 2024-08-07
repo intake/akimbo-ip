@@ -1,1 +1,1 @@
-import akimbo_ip.accessor
+from . import accessor
