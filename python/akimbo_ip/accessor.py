@@ -35,11 +35,7 @@ def match_stringlike(arr):
 
 def parse_address4(str_arr):
     out = lib.parse4(str_arr.offsets.data.astype("uint32"), str_arr.content.data)
-    return ak.contents.RegularArray(
-        ak.contents.NumpyArray(out.view("uint8"), parameters={"__array__": "byte"}), 
-        size=4, 
-        parameters={"__array__": "bytestring"}
-    )
+    return utils.u8_to_ip4(out.view("uint8"))
 
 
 def parse_net4(str_arr):
@@ -95,6 +91,9 @@ class IPAccessor:
     parse_net4 = dec(parse_net4, inmode="ak", match=match_stringlike)
     
     contains4 = dec(contains4, inmode="ak", match=match_net4)
+
+    to_ipv6_mapped = dec(lib.to_ipv6_mapped, inmode="numpy", match=match_ip4, 
+                         outtype=utils.u8_to_ip6)
 
 
 Accessor.register_accessor("ip", IPAccessor)

@@ -7,6 +7,7 @@ styp = pa.string()
 
 
 def pa_mask(mask):
+    """Make pyarrow bitpacked buffer for use as a mask"""
     if mask is not None:
         if mask.dtype == "bool":
             mask = np.packbits(mask, bitorder="little")
@@ -38,6 +39,7 @@ form = ak.forms.ListOffsetForm(
 
 
 def to_ak_string(inputs, highlevel=False):
+    """Make awkward string array from bytes/offsets arrays"""
     data, offsets = inputs
     return ak.from_buffers(
         form,
@@ -45,3 +47,22 @@ def to_ak_string(inputs, highlevel=False):
         {"None-offsets": offsets, "None-data": data},
         highlevel=highlevel,
     )
+
+
+def u8_to_ip6(arr):
+    """Make fixed-length bytestrings for IPv6 output"""
+    return ak.contents.RegularArray(
+        ak.contents.NumpyArray(arr, parameters={"__array__": "byte"}),
+        size=16,
+        parameters={"__array__": "bytestring"}
+    )
+
+
+def u8_to_ip4(arr):
+    """Make fixed-length bytestrings for IPv6 output"""
+    return ak.contents.RegularArray(
+        ak.contents.NumpyArray(arr, parameters={"__array__": "byte"}),
+        size=4,
+        parameters={"__array__": "bytestring"}
+    )
+    

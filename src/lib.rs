@@ -9,13 +9,8 @@ use numpy::ndarray::ArrayView1;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 
 
-pub fn netmask_to_prefix4(mut mask: u32) -> u8 {
-    let mut zerobits: u8 = 0;
-    while (mask & 0x1) == 0 {
-        mask = mask >> 1;
-        zerobits += 1;
-    }
-    32 - zerobits
+pub fn netmask_to_prefix4(mask: u32) -> u8 {
+    mask.leading_ones() as u8
 }
 
 pub fn prefix_to_netmask4(prefix: u8) -> u32 {
@@ -186,11 +181,15 @@ fn is_documentation4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyR
     Ok(out.into_pyarray_bound(py))
 }
 
-//#[pyfunction]
-//fn to_ipv6_compatible<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<u128>>> {
-//    let out: Vec<u128> = x.as_array().iter().map(|&x|Ipv4Addr::from(x).to_ipv6_compatible()).collect();
-//    Ok(out.into_pyarray_bound(py))
-//}
+#[pyfunction]
+fn to_ipv6_mapped<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<u8>>> {
+    let mut out: Vec<u8> = Vec::with_capacity(x.len().unwrap() * 16);
+    for &x in x.as_array().iter() {
+        let bit = Ipv4Addr::from(x).to_ipv6_mapped().octets();
+        out.extend(bit);
+    };
+    Ok(out.into_pyarray_bound(py))
+}
 
 #[pymodule]
 fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -210,5 +209,6 @@ fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse4, m)?)?;
     m.add_function(wrap_pyfunction!(parsenet4, m)?)?;
     m.add_function(wrap_pyfunction!(contains_one4, m)?)?;
+    m.add_function(wrap_pyfunction!(to_ipv6_mapped, m)?)?;
     Ok(())
 }
