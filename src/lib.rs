@@ -5,7 +5,6 @@ use core::net::Ipv4Addr;
 use std::str::{self, FromStr};
 use ipnet::Ipv4Net;
 use numpy::pyo3::Python;
-use numpy::ndarray::ArrayView1;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 
 
@@ -18,14 +17,8 @@ pub fn prefix_to_netmask4(prefix: u8) -> u32 {
     0xffffffff << prefix
 }
 
-
-pub fn netmask_to_prefix6(mut mask: u128) -> u8 {
-    let mut zerobits: u8 = 0;
-    while (mask & 0x1) == 0 {
-        mask = mask >> 1;
-        zerobits += 1;
-    }
-    32 - zerobits
+pub fn netmask_to_prefix6(mask: u128) -> u8 {
+    mask.leading_ones() as u8
 }
 
 pub fn prefix_to_netmask6(prefix: u8) -> u128 {

@@ -1,0 +1,1 @@
+from akimbo_ip import accessor

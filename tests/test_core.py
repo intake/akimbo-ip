@@ -3,7 +3,7 @@ import pytest
 
 import akimbo.pandas  # registers .ak on pandas
 
-import akimbo_ip.accessor  # registers .ip subaccessor
+import akimbo_ip  # registers .ip subaccessor
 
 
 def test_simple4():
@@ -16,6 +16,12 @@ def test_simple4():
     s2 = pd.Series("0.0.0.0")
     out = s2.ak.ip.parse_address4()
     assert out[0] == b"\x00\x00\x00\x00"
+
+
+def test_nested():
+    s = pd.DataFrame({"a": [0], "b": [0]}).ak.merge()
+    out = s.ak.ip.is_global4(where="b")
+    assert out[0] == {"a": 0, "b": False}
 
 
 def test_simple_net4():
