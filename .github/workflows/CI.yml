@@ -52,7 +52,7 @@ jobs:
           args: --release --strip --out dist --find-interpreter
           sccache: 'true'
           manylinux: auto
-          before-script-linux: sudo apt-get install -y libatomic1
+          before-script-linux: apt-get install -y libatomic1
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
