@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: extras
-        run: sudo apt-get install -y libatomic
+        run: sudo apt-get install -y libatomic1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
