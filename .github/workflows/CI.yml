@@ -52,7 +52,7 @@ jobs:
           args: --release --strip --out dist --find-interpreter
           sccache: 'true'
           manylinux: auto
-          before-script-linux: yum install -y libatomic1
+          before-script-linux: yum install -y libatomic
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
