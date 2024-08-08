@@ -52,7 +52,7 @@ def to_ak_string(inputs, highlevel=False):
 def u8_to_ip6(arr):
     """Make fixed-length bytestrings for IPv6 output"""
     return ak.contents.RegularArray(
-        ak.contents.NumpyArray(arr, parameters={"__array__": "byte"}),
+        ak.contents.NumpyArray(arr.view('uint8'), parameters={"__array__": "byte"}),
         size=16,
         parameters={"__array__": "bytestring"}
     )
@@ -61,7 +61,7 @@ def u8_to_ip6(arr):
 def u8_to_ip4(arr):
     """Make fixed-length bytestrings for IPv6 output"""
     return ak.contents.RegularArray(
-        ak.contents.NumpyArray(arr, parameters={"__array__": "byte"}),
+        ak.contents.NumpyArray(arr.view("uint8"), parameters={"__array__": "byte"}),
         size=4,
         parameters={"__array__": "bytestring"}
     )

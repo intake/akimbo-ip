@@ -50,3 +50,16 @@ def test_rename():
     assert s.tolist() == out.tolist()  # no change, no match
     out = out.ak.ip.contains4(b"\x00\x00\x00\x01", match_kwargs={"prefix": "end"})
     assert out[0] is True
+
+
+def test_inner_list_hosts():
+    # note: both addresses are rounded down
+    s = pd.DataFrame({"address": pd.Series([1, 2], dtype="uint32"), 
+                      "prefix": [31, 29]}).ak.merge()
+    out = s.ak.ip.hosts4()
+    assert out.to_list() == [
+        # includes gateway/broadcast
+        [b'\x00\x00\x00\x00', b'\x01\x00\x00\x00'], 
+        # does not include gateway/broadcast
+        [b'\x01\x00\x00\x00', b'\x02\x00\x00\x00', b'\x03\x00\x00\x00', b'\x04\x00\x00\x00', b'\x05\x00\x00\x00', b'\x06\x00\x00\x00']
+    ]

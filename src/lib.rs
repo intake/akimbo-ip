@@ -116,6 +116,23 @@ fn contains_one4<'py>(py: Python<'py>,
 
 
 #[pyfunction]
+fn hosts4<'py>(py: Python<'py>,
+    addr: PyReadonlyArray1<'py, u32>,
+    pref: PyReadonlyArray1<'py, u8>,
+) -> PyResult<(Bound<'py, PyArray1<u32>>, Bound<'py, PyArray1<u64>>)> {
+// returns IP4 data as uint32 and array of offsets (same length as input)
+    let mut out: Vec<u32> = Vec::new();
+    let mut offsets: Vec<u64> = Vec::from([0]);
+    for (&add, &pre) in addr.as_array().iter().zip(pref.as_array()) {
+        let hosts = Ipv4Net::new(Ipv4Addr::from_bits(add), pre).unwrap().hosts();
+        out.extend(hosts.map(|ip|ip.to_bits()));
+        offsets.push(out.len() as u64);
+    };
+    Ok((out.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
+}
+
+
+#[pyfunction]
 fn is_broadcast4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
     let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_broadcast()).collect();
     Ok(out.into_pyarray_bound(py))
@@ -210,5 +227,6 @@ fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parsenet4, m)?)?;
     m.add_function(wrap_pyfunction!(contains_one4, m)?)?;
     m.add_function(wrap_pyfunction!(to_ipv6_mapped, m)?)?;
+    m.add_function(wrap_pyfunction!(hosts4, m)?)?;
     Ok(())
 }

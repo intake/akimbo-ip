@@ -82,6 +82,20 @@ def contains4(nets, other, address="address", prefix="prefix"):
     return ak.contents.NumpyArray(out)
 
 
+def hosts4(nets, address="address", prefix="prefix"):
+    arr = nets[address]
+    if arr.is_leaf:
+        arr = arr.data.astype("uint32")
+    else:
+        # bytestring or 4 * uint8 regular
+        arr = arr.content.data.view("uint32")
+    ips, offsets = lib.hosts4(arr, nets[prefix].data.astype("uint8"))
+    return ak.contents.ListOffsetArray(
+        ak.index.Index64(offsets),
+        utils.u8_to_ip4(ips)
+    )
+
+
 def dec4(func, match=match_ip4, outtype=ak.contents.NumpyArray):
     @functools.wraps(func)
     def func1(arr):
@@ -112,5 +126,6 @@ class IPAccessor:
     to_ipv6_mapped = dec(lib.to_ipv6_mapped, inmode="numpy", match=match_ip4, 
                          outtype=utils.u8_to_ip6)
 
+    hosts4 = dec(hosts4, match=match_net4, inmode="ak")
 
 Accessor.register_accessor("ip", IPAccessor)
