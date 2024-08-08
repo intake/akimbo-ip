@@ -75,7 +75,7 @@ def contains4(nets, other, address="address", prefix="prefix"):
     if arr.is_leaf:
         arr = arr.data.astype("uint32")
     else:
-        # bytestring or 4 * uint8 regular
+        # fixed bytestring or 4 * uint8 regular
         arr = arr.content.data.view("uint32")
     ip = ipaddress.IPv4Address(other)._ip
     out = lib.contains_one4(arr, nets[prefix].data.astype("uint8"), ip)
@@ -87,7 +87,7 @@ def hosts4(nets, address="address", prefix="prefix"):
     if arr.is_leaf:
         arr = arr.data.astype("uint32")
     else:
-        # bytestring or 4 * uint8 regular
+        # fixed bytestring or 4 * uint8 regular
         arr = arr.content.data.view("uint32")
     ips, offsets = lib.hosts4(arr, nets[prefix].data.astype("uint8"))
     return ak.contents.ListOffsetArray(
@@ -113,7 +113,17 @@ class IPAccessor:
     def __init__(self, accessor) -> None:
         self.accessor = accessor
 
+    is_unspecified4 = dec4(lib.is_unspecified4)
+    is_broadcast4 = dec4(lib.is_broadcast4)
     is_global4 = dec4(lib.is_global4)
+    is_loopback4 = dec4(lib.is_loopback4)
+    is_private4 = dec4(lib.is_private4)
+    is_link_local4 = dec4(lib.is_link_local4)
+    is_shared4 = dec4(lib.is_shared4)
+    is_benchmarking4 = dec4(lib.is_benchmarking4)
+    is_reserved4 = dec4(lib.is_reserved4)
+    is_multicast4 = dec4(lib.is_multicast4)
+    is_documentation4 = dec4(lib.is_documentation4)
 
     to_string4 = dec4(lib.to_text4, outtype=utils.to_ak_string)
 

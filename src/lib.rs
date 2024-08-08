@@ -34,30 +34,15 @@ pub fn prefix_to_netmask6(prefix: u8) -> u128 {
 }
 
 
-/// Simplistic function that prints out the input ints as IP4 addresses
-#[pyfunction]
-fn print_out<'py>(x: PyReadonlyArray1<'py, u32>) -> PyResult<()> {
-    let x: ArrayView1<u32> = x.as_array();
-    for val in x.iter() {
-        let ip = Ipv4Addr::from(*val);
-        println!("{:?}", ip)
-    }
-    Ok(())
-}
-
 #[pyfunction]
 fn to_text4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) 
 -> PyResult<(Bound<'py, PyArray1<u8>>, Bound<'py, PyArray1<u32>>)> {
     let mut offsets: Vec<u32> = vec!(0, );
     let mut data: Vec<u8> = Vec::new();
-    let mut curr: u32 = 0;
     for out in  x.as_array().iter()
         {
-            let s = Ipv4Addr::from_bits(*out).to_string();
-            let t = s.as_bytes();
-            data.extend(t);
-            curr += t.len() as u32;
-            offsets.push(curr);
+            data.extend(Ipv4Addr::from_bits(*out).to_string().as_bytes());
+            offsets.push(data.len() as u32);
         };
     Ok((data.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
 }
@@ -210,7 +195,6 @@ fn to_ipv6_mapped<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResu
 
 #[pymodule]
 fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(print_out, m)?)?;
     m.add_function(wrap_pyfunction!(is_broadcast4, m)?)?;
     m.add_function(wrap_pyfunction!(is_unspecified4, m)?)?;
     m.add_function(wrap_pyfunction!(is_global4, m)?)?;
