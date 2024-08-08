@@ -1,5 +1,5 @@
 Akimbo-ip
----------
+=========
 
 Extension enabling fast vector processing of IPv4 and IPv6 values
 within nested/ragged columns of dataframes.
@@ -7,14 +7,17 @@ within nested/ragged columns of dataframes.
 (experimental)
 
 Installation
-~~~~~~~~~~~~
+------------
+
+Run one of the following
 
 ```bash
-> pip install git+https://github.com/intake/akimbo-ip
+> pip install git+https://github.com/intake/akimbo-ip  # dev version
+> pip install akimbo-ip  # released version
 ```
 
 Model
-~~~~~
+-----
 
 - IPv4 addresses are (fixed) length 4 bytestrings, but can be represented
   by any 4-bye value, e.g., uint32
@@ -27,7 +30,7 @@ We can convert between hostmasks, netmasks and prefix lengths.
 Some methods 
 
 Usage
-~~~~~
+-----
 
 ```python
 >>> import akimbo.pandas
