@@ -27,7 +27,7 @@ jobs:
       - name: install
         shell: bash -l {0}
         run: |
-          pip install --no-cache-dir akimbo[test]
+          pip install --no-cache-dir git+https://github.com/intake/akimbo[test]
           pip install .
       - name: test
         shell: bash -l {0}
