@@ -5,6 +5,9 @@ build-backend = "maturin"
 [project]
 name = "akimbo-ip"
 requires-python = ">=3.9"
+description = "IP-specific methods for akimbo"
+readme = "README.md"
+license = { file = "LICENSE" }
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -13,7 +16,6 @@ classifiers = [
 dependencies = [
     "akimbo"
 ]
-
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

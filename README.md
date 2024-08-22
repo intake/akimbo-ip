@@ -20,14 +20,18 @@ Model
 -----
 
 - IPv4 addresses are (fixed) length 4 bytestrings, but can be represented
-  by any 4-bye value, e.g., uint32
-- IPv6 addresses are (fixed) length 16 bytestrings
+  by any 4-bye value, e.g., uint32 or fixed-4-length list of uint8
+- IPv6 addresses are (fixed) length 16 bytestrings or fixed-16-length list
+  of uint8
 - Networks are records with an IPv4 or IPv6 field (nominally "address") and
-  a uint8 field for the prefix length (nominally "prefix")
+  a uint8 field for the prefix length (nominally "prefix"). The field
+  names can be overidden.
 
-We can convert between hostmasks, netmasks and prefix lengths.
+We can convert between hostmasks, netmasks and prefix lengths. Some methods
+require composite types like list-of-addresses, see the individual docstrings.
 
-Some methods 
+As with the normal functioning of akimbo, you can indicate which parts of
+a nested structure should be with the `where=` kwargs to any method.
 
 Usage
 -----

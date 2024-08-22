@@ -2,6 +2,7 @@
 #![feature(addr_parse_ascii)]
 use pyo3::prelude::*;
 use core::net::Ipv4Addr;
+use std::net::Ipv6Addr;
 use std::str::{self, FromStr};
 use ipnet::Ipv4Net;
 use numpy::pyo3::Python;
@@ -54,6 +55,34 @@ fn parse4<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
             Ipv4Addr::parse_ascii(&by[w[0] as usize..w[1] as usize]).unwrap().to_bits()
         }
     ).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn to_text6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) 
+-> PyResult<(Bound<'py, PyArray1<u8>>, Bound<'py, PyArray1<u32>>)> {
+    let mut offsets: Vec<u32> = vec!(0, );
+    let mut data: Vec<u8> = Vec::new();
+    for sl in  x.as_slice().unwrap().chunks_exact(16)
+        {
+            data.extend(Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).to_string().as_bytes());
+            offsets.push(data.len() as u32);
+        };
+    Ok((data.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
+}
+
+#[pyfunction]
+fn parse6<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
+            data : PyReadonlyArray1<'py, u8>
+) -> PyResult<Bound<'py, PyArray1<u8>>> {
+    let ar = offsets.as_array();
+    let sl = ar.as_slice().unwrap();
+    let ar2 = data.as_array();
+    let by = ar2.as_slice().unwrap();
+    let mut out: Vec<u8> = Vec::with_capacity((sl.len() - 1) * 16);
+    for w in  sl.windows(2) {
+        out.extend(Ipv6Addr::parse_ascii(&by[w[0] as usize..w[1] as usize]).unwrap().octets())
+    };
     Ok(out.into_pyarray_bound(py))
 }
 
@@ -177,6 +206,86 @@ fn is_documentation4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyR
 }
 
 #[pyfunction]
+fn is_benchmarking6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_benchmarking()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_documentation6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_documentation()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_global6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_global()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_ipv4_mapped<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_ipv4_mapped()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_loopback6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_loopback()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_multicast6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_multicast()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_unicast6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unicast()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_unicast_link_local<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unicast_link_local()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_unique_local<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unique_local()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
+fn is_unspecified6<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u8>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+    let out: Vec<bool> = x.as_slice().unwrap().chunks_exact(16).map(|sl | {
+        Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unspecified()
+    }).collect();
+    Ok(out.into_pyarray_bound(py))
+}
+
+#[pyfunction]
 fn to_ipv6_mapped<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<u8>>> {
     let mut out: Vec<u8> = Vec::with_capacity(x.len().unwrap() * 16);
     for &x in x.as_array().iter() {
@@ -205,5 +314,18 @@ fn akimbo_ip(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(contains_one4, m)?)?;
     m.add_function(wrap_pyfunction!(to_ipv6_mapped, m)?)?;
     m.add_function(wrap_pyfunction!(hosts4, m)?)?;
+
+    m.add_function(wrap_pyfunction!(is_benchmarking6, m)?)?;
+    m.add_function(wrap_pyfunction!(is_documentation6, m)?)?;
+    m.add_function(wrap_pyfunction!(is_global6, m)?)?;
+    m.add_function(wrap_pyfunction!(is_ipv4_mapped, m)?)?;
+    m.add_function(wrap_pyfunction!(is_loopback6, m)?)?;
+    m.add_function(wrap_pyfunction!(is_multicast6, m)?)?;
+    m.add_function(wrap_pyfunction!(is_unicast6, m)?)?;
+    m.add_function(wrap_pyfunction!(is_unicast_link_local, m)?)?;
+    m.add_function(wrap_pyfunction!(is_unique_local, m)?)?;
+    m.add_function(wrap_pyfunction!(is_unspecified6, m)?)?;
+    m.add_function(wrap_pyfunction!(to_text6, m)?)?;
+    m.add_function(wrap_pyfunction!(parse6, m)?)?;
     Ok(())
 }

@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pandas as pd
 import pytest
 
@@ -5,9 +6,12 @@ import akimbo.pandas  # registers .ak on pandas
 
 import akimbo_ip  # registers .ip subaccessor
 
+bytestring4 = pd.ArrowDtype(pa.binary(4))
+bytestring16 = pd.ArrowDtype(pa.binary(16))
+
 
 def test_simple4():
-    s1 = pd.Series([0], dtype="uint32")
+    s1 = pd.Series([0], dtype="u4")
     out = s1.ak.ip.is_global4()
     assert out[0] is False
     out2 = s1.ak.ip.to_string4()
@@ -16,6 +20,19 @@ def test_simple4():
     s2 = pd.Series("0.0.0.0")
     out = s2.ak.ip.parse_address4()
     assert out[0] == b"\x00\x00\x00\x00"
+
+
+def test_simple6():
+    s1 = pd.Series([b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"],
+                   dtype=bytestring16)
+    out = s1.ak.ip.is_global6()
+    assert out.tolist() == [False, False]
+    
+    out2 = s1.ak.ip.to_string6()
+    assert out2.tolist() == ["::", "::1"]
+    out3 = out2.ak.ip.parse_address6()
+    assert out3[1] == s1[1]
 
 
 def test_nested():
@@ -44,14 +61,14 @@ def test_err():
 
 
 def test_6_out():
-    s1 = pd.Series([1], dtype="uint32")
+    s1 = pd.Series([1], dtype="u4")
     out = s1.ak.ip.to_ipv6_mapped()
     assert out[0] == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x01'
     
 
 def test_rename():
-    s = pd.DataFrame({"address": pd.Series([1], dtype="uint32"), 
-                      "end": [16]}).ak.merge()
+    s = pd.DataFrame({"address": pd.Series([1], dtype="u4"), 
+                      "end": pd.Series([16], dtype="u1")}).ak.merge()
     out = s.ak.ip.contains4(b"\x00\x00\x00\x01")
     assert s.tolist() == out.tolist()  # no change, no match
     out = out.ak.ip.contains4(b"\x00\x00\x00\x01", match_kwargs={"prefix": "end"})
@@ -60,8 +77,8 @@ def test_rename():
 
 def test_inner_list_hosts():
     # note: both addresses are rounded down
-    s = pd.DataFrame({"address": pd.Series([1, 2], dtype="uint32"), 
-                      "prefix": [31, 29]}).ak.merge()
+    s = pd.DataFrame({"address": pd.Series([1, 2], dtype="u4"), 
+                      "prefix": pd.Series([31, 29], dtype="u1")}).ak.merge()
     out = s.ak.ip.hosts4()
     assert out.to_list() == [
         # includes gateway/broadcast
