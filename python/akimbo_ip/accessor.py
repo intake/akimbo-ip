@@ -234,6 +234,24 @@ def dec_ip(func, conv=to_ip4, match=match_ip4, outtype=ak.contents.NumpyArray):
     return dec(func1, match=match, outtype=outtype, inmode="awkward")
 
 
+def bitwise_or(arr, other):
+    if isinstance(other, (str, int)):
+        other = ak.Array(np.array(list(ipaddress.ip_address("255.0.0.0").packed), dtype="uint8"))
+    out = (ak.without_parameters(arr) | ak.without_parameters(other)).layout
+    out.parameters["__array__"] = "bytestring"
+    out.content.parameters["__array__"] = "byte"
+    return out
+            
+
+def bitwise_and(arr, other):
+    if isinstance(other, (str, int)):
+        other = ak.Array(np.array(list(ipaddress.ip_address("255.0.0.0").packed), dtype="uint8"))
+    out = (ak.without_parameters(arr) | ak.without_parameters(other)).layout
+    out.parameters["__array__"] = "bytestring"
+    out.content.parameters["__array__"] = "byte"
+    return out
+
+
 class IPAccessor:
     def __init__(self, accessor) -> None:
         self.accessor = accessor
@@ -248,15 +266,13 @@ class IPAccessor:
         else:
             raise ValueError
 
-    def bitwise_or(self, other):
-        raise NotImplemented("Will allow arr[ip] | mask")
+    bitwise_or = dec(bitwise_or, inmode="ak", match=match_ip)
     
     __or__ = bitwise_or
     def __ror__(self, value):
         return self.__or__(value)
 
-    def bitwise_and(self, other):
-        raise NotImplemented("Will allow arr[ip] & mask")
+    bitwise_and = dec(bitwise_and, inmode="ak", match=match_ip)
     
     __and__ = bitwise_and
     def __rand__(self, value):

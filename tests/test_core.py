@@ -101,3 +101,13 @@ def test_inner_list_hosts():
         # does not include gateway/broadcast
         [b'\x01\x00\x00\x00', b'\x02\x00\x00\x00', b'\x03\x00\x00\x00', b'\x04\x00\x00\x00', b'\x05\x00\x00\x00', b'\x06\x00\x00\x00']
     ]
+
+
+def test_masks():
+    s = pd.Series(["7.7.7.7", "8.8.8.8"]).ak.ip.parse_address4()
+    out1 = s.ak.ip | s.ak.array[:1]
+    assert out1.ak.ip.to_int_list().tolist() == [[7, 7, 7, 7], [15, 15, 15, 15]]
+    
+    out2 = s.ak.ip | "255.0.0.0"
+    assert out2.ak.ip.to_int_list().tolist() == [[255, 7, 7, 7], [255, 8, 8, 8]]
+    
