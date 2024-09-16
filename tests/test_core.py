@@ -2,10 +2,6 @@ import pyarrow as pa
 import pandas as pd
 import pytest
 
-import akimbo.pandas  # registers .ak on pandas
-
-import akimbo_ip  # registers .ip subaccessor
-
 bytestring4 = pd.ArrowDtype(pa.binary(4))
 bytestring16 = pd.ArrowDtype(pa.binary(16))
 
@@ -33,6 +29,25 @@ def test_simple6():
     assert out2.tolist() == ["::", "::1"]
     out3 = out2.ak.ip.parse_address6()
     assert out3[1] == s1[1]
+
+
+def test_to_lists():
+    s1 = pd.Series([b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"],
+                   dtype=bytestring16)
+    out = s1.ak.ip.to_int_list()
+    assert out.to_list() == [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+    ]
+    out2 = out.ak.ip.to_bytestring()
+    assert s1.to_list() == out2.to_list()
+        
+    s2 = pd.Series([0, 1], dtype="uint32")
+    out = s2.ak.ip.to_int_list()
+    assert out.to_list() == [[0, 0, 0, 0], [1, 0, 0, 0]]
+    out2 = out.ak.ip.to_bytestring()
+    assert out2.to_list() == [b'\x00\x00\x00\x00', b'\x01\x00\x00\x00']
 
 
 def test_nested():
