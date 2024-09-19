@@ -25,7 +25,8 @@ fn to_text4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>)
     let mut data: Vec<u8> = Vec::new();
     for out in  x.as_array().iter()
         {
-            data.extend(Ipv4Addr::from_bits(*out).to_string().as_bytes());
+            let (a, b, c, d) = out.to_be_bytes().into();
+            data.extend(Ipv4Addr::new(a, b, c, d).to_string().as_bytes());
             offsets.push(data.len() as u32);
         };
     Ok((data.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
@@ -35,17 +36,20 @@ fn to_text4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>)
 #[pyfunction]
 fn parse4<'py>(py: Python<'py>, offsets: PyReadonlyArray1<'py, u32>,
             data : PyReadonlyArray1<'py, u8>
-) -> PyResult<Bound<'py, PyArray1<u32>>> {
+) -> PyResult<(Bound<'py, PyArray1<u32>>, Bound<'py, PyArray1<u8>>)> {
     let ar = offsets.as_array();
     let sl = ar.as_slice().unwrap();
     let ar2 = data.as_array();
     let by = ar2.as_slice().unwrap();
-    let out: Vec<u32> = sl.windows(2).map(
+    let (out, valid): (Vec<u32>, Vec<u8>) = sl.windows(2).map(
         |w| {
-            Ipv4Addr::parse_ascii(&by[w[0] as usize..w[1] as usize]).unwrap().to_bits()
+            match Ipv4Addr::parse_ascii(&by[w[0] as usize..w[1] as usize]) {
+                Ok(x) => (u32::from_ne_bytes(x.octets()), 1u8),
+                Err(_) => (0u32, 0u8)
+            }
         }
-    ).collect();
-    Ok(out.into_pyarray_bound(py))
+    ).unzip();
+    Ok((out.into_pyarray_bound(py), valid.into_pyarray_bound(py)))
 }
 
 #[pyfunction]
@@ -91,7 +95,7 @@ fn parsenet4<'py>(py: Python<'py>,
     for w in sl.windows(2) {
         let net = Ipv4Net::from_str(
             &str::from_utf8(&by[w[0] as usize..w[1] as usize]).unwrap()).unwrap();
-        outaddr.push(net.addr().to_bits());
+        outaddr.push(u32::from_ne_bytes(net.addr().octets()));
         outpref.push(net.prefix_len());
     };
     Ok((outaddr.into_pyarray_bound(py), outpref.into_pyarray_bound(py)))
@@ -121,8 +125,11 @@ fn hosts4<'py>(py: Python<'py>,
     let mut out: Vec<u32> = Vec::new();
     let mut offsets: Vec<u64> = Vec::from([0]);
     for (&add, &pre) in addr.as_array().iter().zip(pref.as_array()) {
-        let hosts = Ipv4Net::new(Ipv4Addr::from_bits(add), pre).unwrap().hosts();
-        out.extend(hosts.map(|ip|ip.to_bits()));
+        let hosts = Ipv4Net::new({
+        let (a, b, c, d) = add.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d)
+    }, pre).unwrap().hosts();
+        out.extend(hosts.map(|ip|u32::from_ne_bytes(ip.octets())));
         offsets.push(out.len() as u64);
     };
     Ok((out.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
@@ -134,7 +141,7 @@ fn hostmask4<'py>(py: Python<'py>,
     pref: PyReadonlyArray1<'py, u8>,
 ) -> PyResult<Bound<'py, PyArray1<u32>>> {
     let out: Vec<u32> = pref.as_array().iter().map(
-        |x| u32::max_value() >> x
+        |x| u32::from_ne_bytes(Ipv4Net::new(Ipv4Addr::new(0, 0, 0, 0), *x).unwrap().hostmask().octets())
     ).collect();
     Ok(out.into_pyarray_bound(py))
 }
@@ -145,9 +152,8 @@ fn hostmask4<'py>(py: Python<'py>,
 fn netmask4<'py>(py: Python<'py>,
     pref: PyReadonlyArray1<'py, u8>,
 ) -> PyResult<Bound<'py, PyArray1<u32>>> {
-    // TODO: check for prefix >= 128 .checked_shl(prefix).unwrap_or(0)
     let out: Vec<u32> = pref.as_array().iter().map(
-        |x| u32::max_value() << (32 - x)
+        |x| u32::from_ne_bytes(Ipv4Net::new(Ipv4Addr::new(0, 0, 0, 0), *x).unwrap().netmask().octets())
     ).collect();
     Ok(out.into_pyarray_bound(py))
 }
@@ -159,7 +165,10 @@ fn network4<'py>(py: Python<'py>,
     pref: PyReadonlyArray1<'py, u8>,
 ) -> PyResult<Bound<'py, PyArray1<u32>>> {
     let out: Vec<u32> = addr.as_array().iter().zip(pref.as_array().iter()).map(
-        | (&add, &pre) | Ipv4Net::new(Ipv4Addr::from_bits(add), pre).unwrap().network().to_bits()
+        | (&add, &pre) | u32::from_ne_bytes(Ipv4Net::new({
+        let (a, b, c, d) = add.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d)
+    }, pre).unwrap().network().octets())
     ).collect();
     Ok(out.into_pyarray_bound(py))
 }
@@ -172,7 +181,10 @@ fn broadcast4<'py>(py: Python<'py>,
     pref: PyReadonlyArray1<'py, u8>,
 ) -> PyResult<Bound<'py, PyArray1<u32>>> {
     let out: Vec<u32> = addr.as_array().iter().zip(pref.as_array().iter()).map(
-        | (&add, &pre) | Ipv4Net::new(Ipv4Addr::from_bits(add), pre).unwrap().broadcast().to_bits()
+        | (&add, &pre) | u32::from_ne_bytes(Ipv4Net::new({
+        let (a, b, c, d) = add.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d)
+    }, pre).unwrap().broadcast().octets())
     ).collect();
     Ok(out.into_pyarray_bound(py))
 }
@@ -183,7 +195,10 @@ fn trunc4<'py>(py: Python<'py>,
     pref: PyReadonlyArray1<'py, u8>,
 ) -> PyResult<Bound<'py, PyArray1<u32>>> {
     let out: Vec<u32> = addr.as_array().iter().zip(pref.as_array().iter()).map(
-        | (&add, &pre) | Ipv4Net::new(Ipv4Addr::from_bits(add), pre).unwrap().trunc().addr().to_bits()
+        | (&add, &pre) | u32::from_ne_bytes(Ipv4Net::new({
+        let (a, b, c, d) = add.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d)
+    }, pre).unwrap().trunc().addr().octets())
     ).collect();
     Ok(out.into_pyarray_bound(py))
 }
@@ -194,7 +209,10 @@ fn supernet4<'py>(py: Python<'py>,
     pref: PyReadonlyArray1<'py, u8>,
 ) -> PyResult<Bound<'py, PyArray1<u32>>> {
     let out: Vec<u32> = addr.as_array().iter().zip(pref.as_array().iter()).map(
-        | (&add, &pre) | Ipv4Net::new(Ipv4Addr::from_bits(add), pre).unwrap().supernet().unwrap().addr().to_bits()
+        | (&add, &pre) | u32::from_ne_bytes(Ipv4Net::new({
+        let (a, b, c, d) = add.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d)
+    }, pre).unwrap().supernet().unwrap().addr().octets())
     ).collect();
     Ok(out.into_pyarray_bound(py))
 }
@@ -211,10 +229,13 @@ fn subnets4<'py>(py: Python<'py>,
     counts.push(0);
     addr.as_array().iter().zip(pref.as_array().iter()).for_each(
         | (&add, &pre) | {
-            Ipv4Net::new(Ipv4Addr::from_bits(add), pre).unwrap().subnets(new_pref).unwrap().for_each(
+            Ipv4Net::new({
+        let (a, b, c, d) = add.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d)
+    }, pre).unwrap().subnets(new_pref).unwrap().for_each(
                 |x|{
                     count += 1;
-                    out.push(x.addr().to_bits())
+                    out.push(u32::from_ne_bytes(x.addr().octets()))
                 }
             );
             counts.push(count);
@@ -247,12 +268,13 @@ fn aggregate4<'py>(py: Python<'py>,
     for w in offs {
         networks.clear();
         while count_in < *w {
-            networks.push(Ipv4Net::new(Ipv4Addr::from_bits(*ad_slice.next().unwrap()), *pr_slice.next().unwrap()).unwrap());
+            let (a, b, c, d): (u8, u8, u8, u8) = ad_slice.next().unwrap().to_ne_bytes().into();
+            networks.push(Ipv4Net::new(Ipv4Addr::new(a, b, c, d), *pr_slice.next().unwrap()).unwrap());
             count_in += 1;
         };
         Ipv4Net::aggregate(&networks).iter().for_each(
             |x| {
-                out_addr.push(x.addr().to_bits());
+                out_addr.push(u32::from_ne_bytes(x.addr().octets()));
                 out_pref.push(x.prefix_len());
                 count += 1;
             });
@@ -264,67 +286,100 @@ fn aggregate4<'py>(py: Python<'py>,
 
 #[pyfunction]
 fn is_broadcast4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_broadcast()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_broadcast()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_global4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_global()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_global()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_unspecified4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_unspecified()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_unspecified()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_loopback4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_loopback()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_loopback()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_private4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_private()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_private()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_link_local4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_link_local()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_link_local()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_shared4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_shared()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_shared()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_benchmarking4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_benchmarking()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_benchmarking()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_reserved4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_reserved()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_reserved()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_multicast4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_multicast()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_multicast()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 
 #[pyfunction]
 fn is_documentation4<'py>(py: Python<'py>, x: PyReadonlyArray1<'py, u32>) -> PyResult<Bound<'py, PyArray1<bool>>> {
-    let out: Vec<bool> = x.as_array().iter().map(|&x|Ipv4Addr::from_bits(x).is_documentation()).collect();
+    let out: Vec<bool> = x.as_array().iter().map(|&x|{
+        let (a, b, c, d) = x.to_ne_bytes().into();
+        Ipv4Addr::new(a, b, c, d).is_documentation()
+    }).collect();
     Ok(out.into_pyarray_bound(py))
 }
 

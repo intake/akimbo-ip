@@ -92,14 +92,14 @@ def test_rename():
 
 def test_inner_list_hosts():
     # note: both addresses are rounded down
-    s = pd.DataFrame({"address": pd.Series([1, 2], dtype="u4"), 
+    s = pd.DataFrame({"address": pd.Series([b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"], dtype=bytestring4), 
                       "prefix": pd.Series([31, 29], dtype="u1")}).ak.merge()
     out = s.ak.ip.hosts4()
     assert out.to_list() == [
         # includes gateway/broadcast
-        [b'\x00\x00\x00\x00', b'\x01\x00\x00\x00'], 
+        [b'\x00\x00\x00\x00', b'\x00\x00\x00\x01'], 
         # does not include gateway/broadcast
-        [b'\x01\x00\x00\x00', b'\x02\x00\x00\x00', b'\x03\x00\x00\x00', b'\x04\x00\x00\x00', b'\x05\x00\x00\x00', b'\x06\x00\x00\x00']
+        [b'\x01\x00\x00\x01', b'\x01\x00\x00\x02', b'\x01\x00\x00\x03', b'\x01\x00\x00\x04', b'\x01\x00\x00\x05', b'\x01\x00\x00\x06']
     ]
 
 

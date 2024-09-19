@@ -17,7 +17,7 @@ def test_network4():
     assert (out == expected).all()
 
 
-def test_hostmast4():
+def test_hostmask4():
     s = pd.Series(["10.1.0.0/20"]).ak.ip.parse_net4()
     expected = pd.Series("0.0.15.255").ak.ip.parse_address4()
     out = s.ak.ip.hostmask4()
@@ -78,3 +78,11 @@ def test_aggregate4():
     ]]).ak.ip.parse_net4()
     out = s.ak.ip.aggregate4()
     assert out.ak.to_list() == expected.ak.to_list()
+
+
+def test_parse4():
+    s = pd.Series(["127.0.0.1", "broken"])
+    out = s.ak.ip.parse_address4().ak.ip.to_int_list()
+    assert out.tolist() == [[127, 0, 0, 1], pd.NA]
+    
+    

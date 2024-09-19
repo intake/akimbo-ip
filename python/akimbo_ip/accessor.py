@@ -70,8 +70,8 @@ def parse_address4(str_arr):
     
     Output will be fixed length 4 bytestring array
     """
-    out = lib.parse4(str_arr.offsets.data.astype("uint32"), str_arr.content.data)
-    return utils.u8_to_ip4(out.view("uint8"))
+    out, valid = lib.parse4(str_arr.offsets.data.astype("uint32"), str_arr.content.data)
+    return ak.contents.ByteMaskedArray(ak.index.Index8(valid), utils.u8_to_ip4(out.view("uint8")), True)
 
 
 def parse_address6(str_arr):
@@ -216,6 +216,7 @@ def to_bytestring(arr):
 
 def to_ip4(arr):
     if arr.is_leaf:
+        # any 4-byte type like uint32
         return arr.data.view("uint32"),
     else:
         # bytestring or 4 * uint8 regular
