@@ -12,7 +12,7 @@ def test_simple4():
     assert out[0] is False
     out2 = s1.ak.ip.to_string4()
     assert out2[0] == "0.0.0.0"
-    
+
     s2 = pd.Series("0.0.0.0")
     out = s2.ak.ip.parse_address4()
     assert out[0] == b"\x00\x00\x00\x00"
@@ -24,7 +24,7 @@ def test_simple6():
                    dtype=bytestring16)
     out = s1.ak.ip.is_global6()
     assert out.tolist() == [False, False]
-    
+
     out2 = s1.ak.ip.to_string6()
     assert out2.tolist() == ["::", "::1"]
     out3 = out2.ak.ip.parse_address6()
@@ -42,7 +42,7 @@ def test_to_lists():
     ]
     out2 = out.ak.ip.to_bytestring()
     assert s1.to_list() == out2.to_list()
-        
+
     s2 = pd.Series([0, 1], dtype="uint32")
     out = s2.ak.ip.to_int_list()
     assert out.to_list() == [[0, 0, 0, 0], [1, 0, 0, 0]]
@@ -60,7 +60,7 @@ def test_simple_net4():
     s = pd.Series(["0.0.0.0/24"])
     out = s.ak.ip.parse_net4()
     assert out[0] == {"prefix": 24, "address": b"\x00\x00\x00\x00"}
-    
+
     out2 = out.ak.ip.contains4(1)
     assert out2[0] is True
     out2 = out.ak.ip.contains4(b"\x00\x00\x00\x01")
@@ -69,7 +69,6 @@ def test_simple_net4():
     assert out2[0] is True
 
 
-@pytest.mark.xfail(message="Optional not implemented")
 def test_err():
     s = pd.Series(["not-an-ip"])
     s.ak.ip.parse_address4()
@@ -79,10 +78,10 @@ def test_6_out():
     s1 = pd.Series([1], dtype="u4")
     out = s1.ak.ip.to_ipv6_mapped()
     assert out[0] == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x01'
-    
+
 
 def test_rename():
-    s = pd.DataFrame({"address": pd.Series([1], dtype="u4"), 
+    s = pd.DataFrame({"address": pd.Series([1], dtype="u4"),
                       "end": pd.Series([16], dtype="u1")}).ak.merge()
     out = s.ak.ip.contains4(b"\x00\x00\x00\x01")
     assert s.tolist() == out.tolist()  # no change, no match
@@ -92,12 +91,12 @@ def test_rename():
 
 def test_inner_list_hosts():
     # note: both addresses are rounded down
-    s = pd.DataFrame({"address": pd.Series([b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"], dtype=bytestring4), 
+    s = pd.DataFrame({"address": pd.Series([b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"], dtype=bytestring4),
                       "prefix": pd.Series([31, 29], dtype="u1")}).ak.merge()
     out = s.ak.ip.hosts4()
     assert out.to_list() == [
         # includes gateway/broadcast
-        [b'\x00\x00\x00\x00', b'\x00\x00\x00\x01'], 
+        [b'\x00\x00\x00\x00', b'\x00\x00\x00\x01'],
         # does not include gateway/broadcast
         [b'\x01\x00\x00\x01', b'\x01\x00\x00\x02', b'\x01\x00\x00\x03', b'\x01\x00\x00\x04', b'\x01\x00\x00\x05', b'\x01\x00\x00\x06']
     ]
@@ -107,7 +106,6 @@ def test_masks():
     s = pd.Series(["7.7.7.7", "8.8.8.8"]).ak.ip.parse_address4()
     out1 = s.ak.ip | s.ak.array[:1]
     assert out1.ak.ip.to_int_list().tolist() == [[7, 7, 7, 7], [15, 15, 15, 15]]
-    
+
     out2 = s.ak.ip | "255.0.0.0"
     assert out2.ak.ip.to_int_list().tolist() == [[255, 7, 7, 7], [255, 8, 8, 8]]
-    
