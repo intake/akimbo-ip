@@ -55,11 +55,10 @@ jobs:
           manylinux: auto
           before-script-linux: yum install -y libatomic
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
-          overwrite: true
 
   windows:
     runs-on: windows-latest
@@ -80,11 +79,10 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
-          overwrite: true
 
   macos:
     runs-on: macos-latest
@@ -104,11 +102,10 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: 'true'
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
-          overwrite: true
 
   sdist:
     runs-on: ubuntu-latest
@@ -121,11 +118,10 @@ jobs:
           command: sdist
           args: --out dist
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
-          overwrite: true
 
   # release:
   #   name: Release
