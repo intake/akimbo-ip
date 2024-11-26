@@ -51,7 +51,7 @@ def test_to_lists():
 
 
 def test_nested():
-    s = pd.DataFrame({"a": [0], "b": [0]}).ak.merge()
+    s = pd.DataFrame({"a": [0], "b": [0]}).ak.pack()
     out = s.ak.ip.is_global4(where="b")
     assert out[0] == {"a": 0, "b": False}
 
@@ -82,7 +82,7 @@ def test_6_out():
 
 def test_rename():
     s = pd.DataFrame({"address": pd.Series([1], dtype="u4"),
-                      "end": pd.Series([16], dtype="u1")}).ak.merge()
+                      "end": pd.Series([16], dtype="u1")}).ak.pack()
     out = s.ak.ip.contains4(b"\x00\x00\x00\x01")
     assert s.tolist() == out.tolist()  # no change, no match
     out = out.ak.ip.contains4(b"\x00\x00\x00\x01", match_kwargs={"prefix": "end"})
@@ -92,7 +92,7 @@ def test_rename():
 def test_inner_list_hosts():
     # note: both addresses are rounded down
     s = pd.DataFrame({"address": pd.Series([b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"], dtype=bytestring4),
-                      "prefix": pd.Series([31, 29], dtype="u1")}).ak.merge()
+                      "prefix": pd.Series([31, 29], dtype="u1")}).ak.pack()
     out = s.ak.ip.hosts4()
     assert out.to_list() == [
         # includes gateway/broadcast

@@ -14,8 +14,9 @@ from akimbo_ip import utils
 
 def match_ip4(arr):
     """matches fixed-list[4, u8] and fixed-bytestring[4] and ANY 4-byte value (like uint32, assumed big-endian"""
-    return (arr.is_leaf and arr.dtype.itemsize == 4) or (
-        arr.is_regular and arr.size == 4 and arr.content.is_leaf and arr.content.dtype.itemsize == 1)
+    if arr.is_leaf:
+            return arr.dtype.itemsize == 4
+    return arr.is_regular and arr.size == 4 and isinstance(arr.content, ak.contents.Content) and arr.content.is_leaf and arr.content.dtype.itemsize == 1
 
 
 def match_ip6(arr):
@@ -51,7 +52,7 @@ def match_net6(arr, address="address", prefix="prefix"):
         and match_ip6(arr[address])
         and match_prefix(arr[prefix])
     )
-    
+
 
 def match_list_net4(arr, address="address", prefix="prefix"):
     """Matches lists of ip4 network records"""
@@ -67,7 +68,7 @@ def match_stringlike(arr):
 
 def parse_address4(str_arr):
     """Interpret (byte)strings as IPv4 addresses
-    
+
     Output will be fixed length 4 bytestring array
     """
     out, valid = lib.parse4(str_arr.offsets.data.astype("uint32"), str_arr.content.data)
@@ -76,7 +77,7 @@ def parse_address4(str_arr):
 
 def parse_address6(str_arr):
     """Interpret (byte)strings as IPv6 addresses
-    
+
     Output will be fixed length 4 bytestring array
     """
     out = lib.parse6(str_arr.offsets.data.astype("uint32"), str_arr.content.data)
@@ -85,7 +86,7 @@ def parse_address6(str_arr):
 
 def parse_net4(str_arr):
     """Interpret (byte)strings as IPv4 networks (address/prefix)
-    
+
     Output will be a record array {"address": fixed length 4 bytestring, "prefix": uint8}
     """
     out = lib.parsenet4(
@@ -93,14 +94,14 @@ def parse_net4(str_arr):
     )
     return ak.contents.RecordArray(
         [ak.contents.RegularArray(
-            ak.contents.NumpyArray(out[0].view("uint8"), parameters={"__array__": "byte"}), 
-            size=4, 
+            ak.contents.NumpyArray(out[0].view("uint8"), parameters={"__array__": "byte"}),
+            size=4,
             parameters={"__array__": "bytestring"}
         ),
         ak.contents.NumpyArray(out[1])],
         fields=["address", "prefix"]
     )
-    
+
 
 def contains4(nets, other, address="address", prefix="prefix"):
     # TODO: this is single-value only
@@ -127,7 +128,7 @@ def network4(nets, address="address", prefix="prefix"):
     arr, = to_ip4(nets[address])
     out = lib.network4(arr, nets[prefix].data.astype("uint8"))
     return utils.u8_to_ip4(out)
-    
+
 
 def broadcast4(nets, address="address", prefix="prefix"):
     arr, = to_ip4(nets[address])
@@ -138,7 +139,7 @@ def broadcast4(nets, address="address", prefix="prefix"):
 def hostmask4(nets, address="address", prefix="prefix"):
     out = lib.hostmask4(nets[prefix].data.astype("uint8"))
     return utils.u8_to_ip4(out)
-    
+
 
 def netmask4(nets, address="address", prefix="prefix"):
     out = lib.netmask4(nets[prefix].data.astype("uint8"))
@@ -152,7 +153,7 @@ def trunc4(nets, address="address", prefix="prefix"):
         [utils.u8_to_ip4(out), nets[prefix]],
         fields=[address, prefix]
     )
-    
+
 
 def supernet4(nets, address="address", prefix="prefix"):
     arr, = to_ip4(nets[address])
@@ -161,7 +162,7 @@ def supernet4(nets, address="address", prefix="prefix"):
         [utils.u8_to_ip4(out), ak.contents.NumpyArray(nets[prefix].data - 1)],
         fields=[address, prefix]
     )
-    
+
 
 def subnets4(nets, new_prefix, address="address", prefix="prefix"):
     arr, = to_ip4(nets[address])
@@ -170,12 +171,12 @@ def subnets4(nets, new_prefix, address="address", prefix="prefix"):
     return ak.contents.ListOffsetArray(
         ak.index.Index64(offsets),
         ak.contents.RecordArray(
-            [addr, 
+            [addr,
              ak.contents.NumpyArray(np.full((len(addr), ), new_prefix, dtype="uint8"))],
             fields=[address, prefix]
         ),
     )
- 
+
 
 def aggregate4(net_lists, address="address", prefix="prefix"):
     offsets = net_lists.offsets.data.astype("uint64")
@@ -190,7 +191,7 @@ def aggregate4(net_lists, address="address", prefix="prefix"):
             fields=[address, prefix]
         )
     )
-    
+
 
 def to_int_list(arr):
     if (arr.is_leaf and arr.dtype.itemsize == 4):
@@ -225,14 +226,14 @@ def to_ip4(arr):
 def to_ip6(arr):
     # always pass as bytes, and assume length is mod 16 in rust
     return arr.content.data.view("uint8"),
-    
+
 
 def dec_ip(func, conv=to_ip4, match=match_ip4, outtype=ak.contents.NumpyArray):
     @functools.wraps(func)
     def func1(arr):
         return func(*conv(arr))
 
-    return dec(func1, match=match, outtype=outtype, inmode="awkward")
+    return dec(func1, match=match, outtype=outtype, inmode="ak")
 
 
 def bitwise_or(arr, other):
@@ -242,7 +243,7 @@ def bitwise_or(arr, other):
     out.parameters["__array__"] = "bytestring"
     out.content.parameters["__array__"] = "byte"
     return out
-            
+
 
 def bitwise_and(arr, other):
     if isinstance(other, (str, int)):
@@ -262,19 +263,19 @@ class IPAccessor:
         arr = self.accessor.array
         if isinstance(other, (str, int)):
             arr2 = ak.Array([ipaddress.ip_address(other).packed])
-            
+
             return self.accessor.to_output(arr == arr2)
         else:
             raise ValueError
 
     bitwise_or = dec(bitwise_or, inmode="ak", match=match_ip)
-    
+
     __or__ = bitwise_or
     def __ror__(self, value):
         return self.__or__(value)
 
     bitwise_and = dec(bitwise_and, inmode="ak", match=match_ip)
-    
+
     __and__ = bitwise_and
     def __rand__(self, value):
         return self.__and__(value)
@@ -306,7 +307,7 @@ class IPAccessor:
     supernet4 = dec(supernet4, inmode="ak", match=match_net4)
     subnets4 = dec(subnets4, inmode="ak", match=match_net4)
     aggregate4 = dec(aggregate4, inmode="ak", match=match_list_net4)
-    
+
     contains4 = dec(contains4, inmode="ak", match=match_net4)
 
     to_ipv6_mapped = dec_ip(lib.to_ipv6_mapped, outtype=utils.u8_to_ip6)
