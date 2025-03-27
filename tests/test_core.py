@@ -1,6 +1,5 @@
-import pyarrow as pa
 import pandas as pd
-import pytest
+import pyarrow as pa
 
 bytestring4 = pd.ArrowDtype(pa.binary(4))
 bytestring16 = pd.ArrowDtype(pa.binary(16))
@@ -19,9 +18,13 @@ def test_simple4():
 
 
 def test_simple6():
-    s1 = pd.Series([b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
-                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"],
-                   dtype=bytestring16)
+    s1 = pd.Series(
+        [
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        ],
+        dtype=bytestring16,
+    )
     out = s1.ak.ip.is_global6()
     assert out.tolist() == [False, False]
 
@@ -32,13 +35,17 @@ def test_simple6():
 
 
 def test_to_lists():
-    s1 = pd.Series([b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
-                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"],
-                   dtype=bytestring16)
+    s1 = pd.Series(
+        [
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        ],
+        dtype=bytestring16,
+    )
     out = s1.ak.ip.to_int_list()
     assert out.to_list() == [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     ]
     out2 = out.ak.ip.to_bytestring()
     assert s1.to_list() == out2.to_list()
@@ -47,11 +54,11 @@ def test_to_lists():
     out = s2.ak.ip.to_int_list()
     assert out.to_list() == [[0, 0, 0, 0], [1, 0, 0, 0]]
     out2 = out.ak.ip.to_bytestring()
-    assert out2.to_list() == [b'\x00\x00\x00\x00', b'\x01\x00\x00\x00']
+    assert out2.to_list() == [b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"]
 
 
 def test_nested():
-    s = pd.DataFrame({"a": [0], "b": [0]}).ak.merge()
+    s = pd.DataFrame({"a": [0], "b": [0]}).ak.pack()
     out = s.ak.ip.is_global4(where="b")
     assert out[0] == {"a": 0, "b": False}
 
@@ -77,12 +84,13 @@ def test_err():
 def test_6_out():
     s1 = pd.Series([1], dtype="u4")
     out = s1.ak.ip.to_ipv6_mapped()
-    assert out[0] == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x01'
+    assert out[0] == b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x01"
 
 
 def test_rename():
-    s = pd.DataFrame({"address": pd.Series([1], dtype="u4"),
-                      "end": pd.Series([16], dtype="u1")}).ak.merge()
+    s = pd.DataFrame(
+        {"address": pd.Series([1], dtype="u4"), "end": pd.Series([16], dtype="u1")}
+    ).ak.pack()
     out = s.ak.ip.contains4(b"\x00\x00\x00\x01")
     assert s.tolist() == out.tolist()  # no change, no match
     out = out.ak.ip.contains4(b"\x00\x00\x00\x01", match_kwargs={"prefix": "end"})
@@ -91,14 +99,27 @@ def test_rename():
 
 def test_inner_list_hosts():
     # note: both addresses are rounded down
-    s = pd.DataFrame({"address": pd.Series([b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"], dtype=bytestring4),
-                      "prefix": pd.Series([31, 29], dtype="u1")}).ak.merge()
+    s = pd.DataFrame(
+        {
+            "address": pd.Series(
+                [b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"], dtype=bytestring4
+            ),
+            "prefix": pd.Series([31, 29], dtype="u1"),
+        }
+    ).ak.pack()
     out = s.ak.ip.hosts4()
     assert out.to_list() == [
         # includes gateway/broadcast
-        [b'\x00\x00\x00\x00', b'\x00\x00\x00\x01'],
+        [b"\x00\x00\x00\x00", b"\x00\x00\x00\x01"],
         # does not include gateway/broadcast
-        [b'\x01\x00\x00\x01', b'\x01\x00\x00\x02', b'\x01\x00\x00\x03', b'\x01\x00\x00\x04', b'\x01\x00\x00\x05', b'\x01\x00\x00\x06']
+        [
+            b"\x01\x00\x00\x01",
+            b"\x01\x00\x00\x02",
+            b"\x01\x00\x00\x03",
+            b"\x01\x00\x00\x04",
+            b"\x01\x00\x00\x05",
+            b"\x01\x00\x00\x06",
+        ],
     ]
 
 
@@ -107,5 +128,8 @@ def test_masks():
     out1 = s.ak.ip | s.ak.array[:1]
     assert out1.ak.ip.to_int_list().tolist() == [[7, 7, 7, 7], [15, 15, 15, 15]]
 
-    out2 = s.ak.ip | "255.0.0.0"
-    assert out2.ak.ip.to_int_list().tolist() == [[255, 7, 7, 7], [255, 8, 8, 8]]
+    out2 = s.ak.ip == "7.7.7.7"
+    assert out2.ak.tolist() == [True, False]
+
+    out3 = s.ak.ip | "255.0.0.0"
+    assert out3.ak.ip.to_int_list().tolist() == [[255, 7, 7, 7], [255, 8, 8, 8]]
