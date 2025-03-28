@@ -28,7 +28,7 @@ fn to_text4<'py>(
         data.extend(Ipv4Addr::new(a, b, c, d).to_string().as_bytes());
         offsets.push(data.len() as u32);
     }
-    Ok((data.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
+    Ok((data.into_pyarray(py), offsets.into_pyarray(py)))
 }
 
 /// Parse strings into IP4 addresses (length 4 bytestrings)
@@ -51,7 +51,7 @@ fn parse4<'py>(
             },
         )
         .unzip();
-    Ok((out.into_pyarray_bound(py), valid.into_pyarray_bound(py)))
+    Ok((out.into_pyarray(py), valid.into_pyarray(py)))
 }
 
 #[pyfunction]
@@ -69,7 +69,7 @@ fn to_text6<'py>(
         );
         offsets.push(data.len() as u32);
     }
-    Ok((data.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
+    Ok((data.into_pyarray(py), offsets.into_pyarray(py)))
 }
 
 #[pyfunction]
@@ -90,7 +90,7 @@ fn parse6<'py>(
                 .octets(),
         )
     }
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 /// Parse strings into IP4 networks (length 4 bytestring and 1-byte prefix value)
@@ -112,10 +112,7 @@ fn parsenet4<'py>(
         outaddr.push(u32::from_ne_bytes(net.addr().octets()));
         outpref.push(net.prefix_len());
     }
-    Ok((
-        outaddr.into_pyarray_bound(py),
-        outpref.into_pyarray_bound(py),
-    ))
+    Ok((outaddr.into_pyarray(py), outpref.into_pyarray(py)))
 }
 
 /// Is `other` contained in the address/prefix pairs of the input array?
@@ -136,7 +133,7 @@ fn contains_one4<'py>(
                 .contains(&Ipv4Addr::from_bits(other))
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 // list of IP4 addresses indicated by each network
@@ -161,7 +158,7 @@ fn hosts4<'py>(
         out.extend(hosts.map(|ip| u32::from_ne_bytes(ip.octets())));
         offsets.push(out.len() as u64);
     }
-    Ok((out.into_pyarray_bound(py), offsets.into_pyarray_bound(py)))
+    Ok((out.into_pyarray(py), offsets.into_pyarray(py)))
 }
 
 /// the hostmask implied by the given network prefix
@@ -182,7 +179,7 @@ fn hostmask4<'py>(
             )
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 /// the netmask implied by the given network prefix
@@ -203,7 +200,7 @@ fn netmask4<'py>(
             )
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 /// the base network address of the given network values
@@ -232,7 +229,7 @@ fn network4<'py>(
             )
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 /// the highest address of the given network values
@@ -261,7 +258,7 @@ fn broadcast4<'py>(
             )
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -290,7 +287,7 @@ fn trunc4<'py>(
             )
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -320,7 +317,7 @@ fn supernet4<'py>(
             )
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -354,7 +351,7 @@ fn subnets4<'py>(
             });
             counts.push(count);
         });
-    Ok((out.into_pyarray_bound(py), counts.into_pyarray_bound(py)))
+    Ok((out.into_pyarray(py), counts.into_pyarray(py)))
 }
 
 #[pyfunction]
@@ -398,9 +395,9 @@ fn aggregate4<'py>(
         counts.push(count);
     }
     Ok((
-        out_addr.into_pyarray_bound(py),
-        out_pref.into_pyarray_bound(py),
-        counts.into_pyarray_bound(py),
+        out_addr.into_pyarray(py),
+        out_pref.into_pyarray(py),
+        counts.into_pyarray(py),
     ))
 }
 
@@ -417,7 +414,7 @@ fn is_broadcast4<'py>(
             Ipv4Addr::new(a, b, c, d).is_broadcast()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -433,7 +430,7 @@ fn is_global4<'py>(
             Ipv4Addr::new(a, b, c, d).is_global()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -449,7 +446,7 @@ fn is_unspecified4<'py>(
             Ipv4Addr::new(a, b, c, d).is_unspecified()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -465,7 +462,7 @@ fn is_loopback4<'py>(
             Ipv4Addr::new(a, b, c, d).is_loopback()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -481,7 +478,7 @@ fn is_private4<'py>(
             Ipv4Addr::new(a, b, c, d).is_private()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -497,7 +494,7 @@ fn is_link_local4<'py>(
             Ipv4Addr::new(a, b, c, d).is_link_local()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -513,7 +510,7 @@ fn is_shared4<'py>(
             Ipv4Addr::new(a, b, c, d).is_shared()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -529,7 +526,7 @@ fn is_benchmarking4<'py>(
             Ipv4Addr::new(a, b, c, d).is_benchmarking()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -545,7 +542,7 @@ fn is_reserved4<'py>(
             Ipv4Addr::new(a, b, c, d).is_reserved()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -561,7 +558,7 @@ fn is_multicast4<'py>(
             Ipv4Addr::new(a, b, c, d).is_multicast()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -577,7 +574,7 @@ fn is_documentation4<'py>(
             Ipv4Addr::new(a, b, c, d).is_documentation()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -593,7 +590,7 @@ fn is_benchmarking6<'py>(
             Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_benchmarking()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -609,7 +606,7 @@ fn is_documentation6<'py>(
             Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_documentation()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -623,7 +620,7 @@ fn is_global6<'py>(
         .chunks_exact(16)
         .map(|sl| Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_global())
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -637,7 +634,7 @@ fn is_ipv4_mapped<'py>(
         .chunks_exact(16)
         .map(|sl| Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_ipv4_mapped())
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -651,7 +648,7 @@ fn is_loopback6<'py>(
         .chunks_exact(16)
         .map(|sl| Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_loopback())
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -665,7 +662,7 @@ fn is_multicast6<'py>(
         .chunks_exact(16)
         .map(|sl| Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_multicast())
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -679,7 +676,7 @@ fn is_unicast6<'py>(
         .chunks_exact(16)
         .map(|sl| Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unicast())
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -695,7 +692,7 @@ fn is_unicast_link_local<'py>(
             Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unicast_link_local()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -711,7 +708,7 @@ fn is_unique_local<'py>(
             Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unique_local()
         })
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -725,7 +722,7 @@ fn is_unspecified6<'py>(
         .chunks_exact(16)
         .map(|sl| Ipv6Addr::from_bits(u128::from_be_bytes(sl.try_into().unwrap())).is_unspecified())
         .collect();
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pyfunction]
@@ -738,7 +735,7 @@ fn to_ipv6_mapped<'py>(
         let bit = Ipv4Addr::from(x).to_ipv6_mapped().octets();
         out.extend(bit);
     }
-    Ok(out.into_pyarray_bound(py))
+    Ok(out.into_pyarray(py))
 }
 
 #[pymodule]
